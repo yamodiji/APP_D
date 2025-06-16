@@ -43,6 +43,11 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
+# Gradle build cache
+/android/.gradle/
+/android/app/.gradle/
+.gradle/
+
 # iOS related
 **/ios/**/*.mode1v3
 **/ios/**/*.mode2v3
