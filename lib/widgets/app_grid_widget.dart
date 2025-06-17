@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import '../models/app_info.dart';
 import '../providers/theme_provider.dart';
 import '../providers/settings_provider.dart';
-import '../widgets/app_item_widget.dart';
 import '../utils/constants.dart';
 
 class AppGridWidget extends StatelessWidget {
@@ -21,90 +20,87 @@ class AppGridWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (apps.isEmpty) {
-      return _buildEmptyState(context);
-    }
-
     return Consumer2<ThemeProvider, SettingsProvider>(
       builder: (context, themeProvider, settingsProvider, child) {
-        // Calculate grid dimensions based on screen size and icon size
-        final screenWidth = MediaQuery.of(context).size.width;
-        final iconSize = settingsProvider.iconSize;
-        final itemWidth = iconSize + AppConstants.paddingMedium * 2;
-        final crossAxisCount = (screenWidth / itemWidth).floor().clamp(3, 6);
+        if (apps.isEmpty) {
+          return Center(
+            child: Text(
+              'No apps found',
+              style: TextStyle(
+                color: themeProvider.getTextColor(context),
+                fontSize: 16,
+              ),
+            ),
+          );
+        }
 
-        return Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppConstants.paddingSmall,
+        return GridView.builder(
+          padding: const EdgeInsets.all(AppConstants.paddingMedium),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: _getCrossAxisCount(context, settingsProvider.iconSize),
+            childAspectRatio: 0.8,
+            crossAxisSpacing: AppConstants.paddingSmall,
+            mainAxisSpacing: AppConstants.paddingSmall,
           ),
-          child: CustomScrollView(
-            physics: const BouncingScrollPhysics(),
-            slivers: [
-              // Performance optimized grid
-              SliverGrid(
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: crossAxisCount,
-                  childAspectRatio: 0.9,
-                  crossAxisSpacing: AppConstants.paddingSmall,
-                  mainAxisSpacing: AppConstants.paddingSmall,
-                ),
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final app = apps[index];
-                    return AppItemWidget(
-                      app: app,
-                      onTap: () => onAppTap(app),
-                      onLongPress: () => onAppLongPress(app),
-                      animationsEnabled: settingsProvider.animationsEnabled,
-                    );
-                  },
-                  childCount: apps.length,
-                  addAutomaticKeepAlives: false,
-                  addRepaintBoundaries: true,
-                ),
+          itemCount: apps.length,
+          itemBuilder: (context, index) {
+            final app = apps[index];
+            return GestureDetector(
+              onTap: () => onAppTap(app),
+              onLongPress: () => onAppLongPress(app),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // App icon
+                  Container(
+                    width: settingsProvider.iconSize,
+                    height: settingsProvider.iconSize,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: app.icon != null
+                          ? Image.memory(
+                              app.icon!,
+                              fit: BoxFit.cover,
+                            )
+                          : Container(
+                              color: themeProvider.getSurfaceColor(context),
+                              child: Icon(
+                                Icons.android,
+                                size: settingsProvider.iconSize * 0.6,
+                                color: themeProvider.getTextColor(context),
+                              ),
+                            ),
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 4),
+                  
+                  // App name
+                  Text(
+                    app.displayName,
+                    style: TextStyle(
+                      color: themeProvider.getTextColor(context),
+                      fontSize: 12,
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ),
-              
-              // Bottom padding
-              const SliverToBoxAdapter(
-                child: SizedBox(height: AppConstants.paddingLarge),
-              ),
-            ],
-          ),
+            );
+          },
         );
       },
     );
   }
 
-  Widget _buildEmptyState(BuildContext context) {
-    return Consumer<ThemeProvider>(
-      builder: (context, themeProvider, child) {
-        return Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.search_off,
-                size: 64,
-                color: themeProvider.getTextColor(context).withOpacity(0.3),
-              ),
-              const SizedBox(height: AppConstants.paddingMedium),
-              Text(
-                'No apps found',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: themeProvider.getTextColor(context).withOpacity(0.6),
-                ),
-              ),
-              const SizedBox(height: AppConstants.paddingSmall),
-              Text(
-                'Try adjusting your search',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: themeProvider.getTextColor(context).withOpacity(0.4),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
+  int _getCrossAxisCount(BuildContext context, double iconSize) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final itemWidth = iconSize + 32; // icon + padding
+    return (screenWidth / itemWidth).floor().clamp(3, 6);
   }
 } 

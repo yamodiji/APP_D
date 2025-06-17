@@ -30,26 +30,15 @@ class QuickActionsWidget extends StatelessWidget {
           children: [
             // Favorites section
             if (hasFavorites) ...[
-              _buildSectionHeader(
-                context,
-                'Favorites',
-                Icons.favorite,
-                themeProvider,
-              ),
+              _buildSectionHeader(context, 'Favorites', themeProvider),
               const SizedBox(height: AppConstants.paddingSmall),
               _buildFavoriteApps(context, appProvider, themeProvider),
-              const SizedBox(height: AppConstants.paddingMedium),
+              if (hasSearchHistory) const SizedBox(height: AppConstants.paddingMedium),
             ],
 
             // Search history section
             if (hasSearchHistory) ...[
-              _buildSectionHeader(
-                context,
-                'Recent Searches',
-                Icons.history,
-                themeProvider,
-                onClear: () => appProvider.clearSearchHistory(),
-              ),
+              _buildSectionHeader(context, 'Recent Searches', themeProvider),
               const SizedBox(height: AppConstants.paddingSmall),
               _buildSearchHistory(context, appProvider, themeProvider),
             ],
@@ -62,46 +51,15 @@ class QuickActionsWidget extends StatelessWidget {
   Widget _buildSectionHeader(
     BuildContext context,
     String title,
-    IconData icon,
-    ThemeProvider themeProvider, {
-    VoidCallback? onClear,
-  }) {
-    return Row(
-      children: [
-        Icon(
-          icon,
-          size: 16,
-          color: themeProvider.getTextColor(context).withOpacity(0.7),
-        ),
-        const SizedBox(width: AppConstants.paddingSmall),
-        Text(
-          title,
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-            color: themeProvider.getTextColor(context).withOpacity(0.7),
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const Spacer(),
-        if (onClear != null)
-          TextButton(
-            onPressed: onClear,
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppConstants.paddingSmall,
-                vertical: 4,
-              ),
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-            child: Text(
-              'Clear',
-              style: TextStyle(
-                color: themeProvider.getAccentColor(context),
-                fontSize: 12,
-              ),
-            ),
-          ),
-      ],
+    ThemeProvider themeProvider,
+  ) {
+    return Text(
+      title,
+      style: TextStyle(
+        color: themeProvider.getTextColor(context).withOpacity(0.7),
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+      ),
     );
   }
 
@@ -132,13 +90,6 @@ class QuickActionsWidget extends StatelessWidget {
                     height: 40,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(8),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 2,
-                          offset: const Offset(0, 1),
-                        ),
-                      ],
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(8),
@@ -193,33 +144,23 @@ class QuickActionsWidget extends StatelessWidget {
           onTap: () => onSearchHistoryTap(query),
           child: Container(
             padding: const EdgeInsets.symmetric(
-              horizontal: AppConstants.paddingMedium,
-              vertical: AppConstants.paddingSmall,
+              horizontal: 12,
+              vertical: 6,
             ),
             decoration: BoxDecoration(
               color: themeProvider.getSurfaceColor(context),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: themeProvider.getTextColor(context).withOpacity(0.1),
+                color: themeProvider.getTextColor(context).withOpacity(0.2),
+                width: 1,
               ),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.history,
-                  size: 14,
-                  color: themeProvider.getTextColor(context).withOpacity(0.5),
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  query,
-                  style: TextStyle(
-                    color: themeProvider.getTextColor(context),
-                    fontSize: 12,
-                  ),
-                ),
-              ],
+            child: Text(
+              query,
+              style: TextStyle(
+                color: themeProvider.getTextColor(context),
+                fontSize: 12,
+              ),
             ),
           ),
         );

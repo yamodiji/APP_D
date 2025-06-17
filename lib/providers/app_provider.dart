@@ -81,20 +81,17 @@ class AppProvider extends ChangeNotifier {
       
       // Get installed apps
       final installedApps = await InstalledApps.getInstalledApps(
-        true, // exclude system apps
+        false, // include system apps
         true, // include icons
         '', // no package name prefix filter
       );
 
-      // Convert to AppInfo objects and filter out unwanted apps
+      // Convert to AppInfo objects and filter out only essential system apps
       _allApps = [];
       for (var app in installedApps) {
-        // Check if it's a system app separately
-        final isSystemApp = await InstalledApps.isSystemApp(app.packageName);
-        
-        if (isSystemApp != true && !_shouldHideApp(app)) {
+        if (!_shouldHideApp(app)) {
           final appInfo = AppInfo.fromInstalledApp(app);
-          _allApps.add(appInfo.copyWith(systemApp: isSystemApp == true));
+          _allApps.add(appInfo);
         }
       }
 
@@ -122,18 +119,24 @@ class AppProvider extends ChangeNotifier {
   }
 
   bool _shouldHideApp(installed_apps.AppInfo app) {
-    // Hide certain packages
+    // Only hide problematic packages that shouldn't be launched
     final hidePackages = [
       'com.android.launcher',
-      'com.google.android.launcher',
+      'com.google.android.launcher', 
       'com.sec.android.app.launcher',
       'com.miui.home',
       'com.oneplus.launcher',
-      'com.android.settings',
       'com.android.packageinstaller',
+      'com.android.vending', // Play Store backend
+      'com.google.android.gms', // Google Play Services
+      'com.android.shell',
+      'com.android.systemui',
     ];
     
-    return hidePackages.any((pkg) => app.packageName.contains(pkg));
+    // Hide if package name contains any of the problematic patterns
+    return hidePackages.any((pkg) => app.packageName.contains(pkg)) ||
+           app.name.isEmpty || // Hide apps with no name
+           app.packageName.startsWith('com.android.internal'); // Hide internal Android packages
   }
 
   void _setLoading(bool loading) {

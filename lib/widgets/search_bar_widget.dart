@@ -45,13 +45,10 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
           decoration: BoxDecoration(
             color: themeProvider.getSurfaceColor(context),
             borderRadius: BorderRadius.circular(AppConstants.borderRadius),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
+            border: Border.all(
+              color: themeProvider.getTextColor(context).withOpacity(0.2),
+              width: 1,
+            ),
           ),
           child: Row(
             children: [
@@ -63,7 +60,7 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
                 child: Icon(
                   Icons.search,
                   color: themeProvider.getTextColor(context).withOpacity(0.6),
-                  size: 24,
+                  size: 20,
                 ),
               ),
               
@@ -106,7 +103,8 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
                     Icons.clear,
                     color: themeProvider.getTextColor(context).withOpacity(0.6),
                   ),
-                  tooltip: 'Clear search',
+                  iconSize: 20,
+                  tooltip: 'Clear',
                 ),
               
               // Settings button
@@ -116,6 +114,7 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
                   Icons.settings,
                   color: themeProvider.getTextColor(context).withOpacity(0.6),
                 ),
+                iconSize: 20,
                 tooltip: 'Settings',
               ),
             ],
