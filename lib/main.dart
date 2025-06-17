@@ -1,45 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
 import 'providers/app_provider.dart';
 import 'providers/theme_provider.dart';
 import 'providers/settings_provider.dart';
 import 'screens/home_screen.dart';
-
+import 'utils/constants.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Set system UI overlays for immersive experience
-  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      systemNavigationBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
-      systemNavigationBarIconBrightness: Brightness.light,
-    ),
-  );
+  // Set preferred orientations
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+  ]);
 
-  // Initialize SharedPreferences
-  final prefs = await SharedPreferences.getInstance();
-
-  runApp(SpeedDrawerApp(prefs: prefs));
+  runApp(const SpeedDrawerApp());
 }
 
 class SpeedDrawerApp extends StatelessWidget {
-  final SharedPreferences prefs;
-
-  const SpeedDrawerApp({super.key, required this.prefs});
+  const SpeedDrawerApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => ThemeProvider(prefs)),
-        ChangeNotifierProvider(create: (_) => SettingsProvider(prefs)),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => SettingsProvider()),
         ChangeNotifierProvider(create: (_) => AppProvider()),
       ],
       child: Consumer<ThemeProvider>(
@@ -47,13 +34,10 @@ class SpeedDrawerApp extends StatelessWidget {
           return MaterialApp(
             title: 'Speed Drawer',
             debugShowCheckedModeBanner: false,
-            theme: themeProvider.lightTheme,
-            darkTheme: themeProvider.darkTheme,
+            theme: AppConstants.lightTheme,
+            darkTheme: AppConstants.darkTheme,
             themeMode: themeProvider.themeMode,
             home: const HomeScreen(),
-            routes: {
-              '/home': (context) => const HomeScreen(),
-            },
           );
         },
       ),

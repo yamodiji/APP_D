@@ -16,14 +16,16 @@ migrate_working_dir/
 *.iws
 .idea/
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
+# Visual Studio Code related
+.classpath
+.project
+.settings/
+.vscode/
 
 # Flutter/Dart/Pub related
 **/doc/api/
-**/ios/Flutter/.last_build_id
+**/ios/Flutter/flutter_assets/
+**/ios/Flutter/flutter_export_environment.sh
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
@@ -43,19 +45,20 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# Gradle build cache
-/android/.gradle/
-/android/app/.gradle/
-.gradle/
-
 # iOS related
 **/ios/**/*.mode1v3
 **/ios/**/*.mode2v3
 **/ios/**/*.moved-aside
 **/ios/**/*.pbxuser
 **/ios/**/*.perspectivev3
-**/ios/**/UserInterfaceState.xcuserstate
+**/ios/**/DerivedData/
+**/ios/**/Icon?
+**/ios/**/Pods/
+**/ios/**/.symlinks/
+**/ios/**/profile
+**/ios/**/xcuserdata
 **/ios/.generated/
+**/ios/Flutter/.last_build_id
 **/ios/Flutter/App.framework
 **/ios/Flutter/Flutter.framework
 **/ios/Flutter/Flutter.podspec
@@ -71,14 +74,10 @@ app.*.map.json
 # Web related
 lib/generated_plugin_registrant.dart
 
-# Coverage
-coverage/
+# Gradle files
+**/.gradle/
+**/build/
+gradle-app.setting
 
-# Exceptions to above rules.
-!/packages/flutter_tools/test/data/dart_dependencies_test/**/.packages
-
-# Additional ignores for this project
-android/app/upload-keystore.jks
-android/key.properties
-local.properties
-.env 
+# Local configuration file (sdk path, etc)
+local.properties 

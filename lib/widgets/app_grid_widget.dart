@@ -1,106 +1,97 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-
 import '../models/app_info.dart';
-import '../providers/theme_provider.dart';
-import '../providers/settings_provider.dart';
-import '../utils/constants.dart';
+import 'app_item_widget.dart';
 
 class AppGridWidget extends StatelessWidget {
   final List<AppInfo> apps;
+  final int appsPerRow;
+  final double iconSize;
   final Function(AppInfo) onAppTap;
   final Function(AppInfo) onAppLongPress;
 
   const AppGridWidget({
     super.key,
     required this.apps,
+    required this.appsPerRow,
+    required this.iconSize,
     required this.onAppTap,
     required this.onAppLongPress,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Consumer2<ThemeProvider, SettingsProvider>(
-      builder: (context, themeProvider, settingsProvider, child) {
-        if (apps.isEmpty) {
-          return Center(
-            child: Text(
-              'No apps found',
-              style: TextStyle(
-                color: themeProvider.getTextColor(context),
-                fontSize: 16,
-              ),
-            ),
-          );
-        }
+    if (apps.isEmpty) {
+      return _buildEmptyState(context);
+    }
 
-        return GridView.builder(
-          padding: const EdgeInsets.all(AppConstants.paddingMedium),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: _getCrossAxisCount(context, settingsProvider.iconSize),
-            childAspectRatio: 0.8,
-            crossAxisSpacing: AppConstants.paddingSmall,
-            mainAxisSpacing: AppConstants.paddingSmall,
+    return CustomScrollView(
+      physics: const BouncingScrollPhysics(),
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          sliver: SliverGrid(
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: appsPerRow,
+              crossAxisSpacing: 12.0,
+              mainAxisSpacing: 12.0,
+              childAspectRatio: 0.85,
+            ),
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                if (index >= apps.length) return null;
+                
+                final app = apps[index];
+                return AppItemWidget(
+                  app: app,
+                  iconSize: iconSize,
+                  onTap: () => onAppTap(app),
+                  onLongPress: () => onAppLongPress(app),
+                );
+              },
+              childCount: apps.length,
+              // Enable semantic indexing for better performance
+              addSemanticIndexes: false,
+            ),
           ),
-          itemCount: apps.length,
-          itemBuilder: (context, index) {
-            final app = apps[index];
-            return GestureDetector(
-              onTap: () => onAppTap(app),
-              onLongPress: () => onAppLongPress(app),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // App icon
-                  Container(
-                    width: settingsProvider.iconSize,
-                    height: settingsProvider.iconSize,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: app.icon != null
-                          ? Image.memory(
-                              app.icon!,
-                              fit: BoxFit.cover,
-                            )
-                          : Container(
-                              color: themeProvider.getSurfaceColor(context),
-                              child: Icon(
-                                Icons.android,
-                                size: settingsProvider.iconSize * 0.6,
-                                color: themeProvider.getTextColor(context),
-                              ),
-                            ),
-                    ),
-                  ),
-                  
-                  const SizedBox(height: 4),
-                  
-                  // App name
-                  Text(
-                    app.displayName,
-                    style: TextStyle(
-                      color: themeProvider.getTextColor(context),
-                      fontSize: 12,
-                    ),
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
+        ),
+        
+        // Add some bottom padding
+        const SliverPadding(
+          padding: EdgeInsets.only(bottom: 80),
+        ),
+      ],
     );
   }
 
-  int _getCrossAxisCount(BuildContext context, double iconSize) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final itemWidth = iconSize + 32; // icon + padding
-    return (screenWidth / itemWidth).floor().clamp(3, 6);
+  Widget _buildEmptyState(BuildContext context) {
+    final theme = Theme.of(context);
+    
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.search_off,
+            size: 64,
+            color: theme.colorScheme.onSurface.withOpacity(0.4),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No apps found',
+            style: theme.textTheme.headlineSmall?.copyWith(
+              color: theme.colorScheme.onSurface.withOpacity(0.6),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Try adjusting your search or refresh the app list',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurface.withOpacity(0.4),
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
   }
 } 

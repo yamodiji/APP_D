@@ -1,12 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:installed_apps/installed_apps.dart';
-import 'package:installed_apps/app_info.dart' as installed_apps;
+import 'package:device_apps/device_apps.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:fuzzy/fuzzy.dart';
-
+import 'package:sqflite/sqflite.dart';
+import 'package:path/path.dart';
+import 'package:android_intent_plus/android_intent.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../models/app_info.dart';
 import '../utils/constants.dart';
 
@@ -15,301 +16,248 @@ class AppProvider extends ChangeNotifier {
   List<AppInfo> _filteredApps = [];
   List<AppInfo> _favoriteApps = [];
   List<AppInfo> _mostUsedApps = [];
-  List<String> _searchHistory = [];
-  
-  String _searchQuery = '';
   bool _isLoading = false;
-  bool _fuzzySearchEnabled = true;
-  bool _showMostUsed = true;
-  bool _autoFocus = true;
-  
-  Timer? _debounceTimer;
-  late Fuzzy<AppInfo> _fuzzySearcher;
-  SharedPreferences? _prefs;
+  String _searchQuery = '';
+  Timer? _searchDebouncer;
+  Database? _database;
+  bool _isInitialized = false;
 
-  // Getters
   List<AppInfo> get allApps => _allApps;
   List<AppInfo> get filteredApps => _filteredApps;
   List<AppInfo> get favoriteApps => _favoriteApps;
   List<AppInfo> get mostUsedApps => _mostUsedApps;
-  List<String> get searchHistory => _searchHistory;
-  String get searchQuery => _searchQuery;
   bool get isLoading => _isLoading;
-  bool get fuzzySearchEnabled => _fuzzySearchEnabled;
-  bool get showMostUsed => _showMostUsed;
-  bool get autoFocus => _autoFocus;
+  String get searchQuery => _searchQuery;
+  bool get isInitialized => _isInitialized;
 
-  AppProvider() {
-    _initializeFuzzySearcher();
-    _loadApps();
-  }
-
-  void _initializeFuzzySearcher() {
-    _fuzzySearcher = Fuzzy<AppInfo>(
-      _allApps,
-      options: FuzzyOptions(
-        keys: [
-          WeightedKey(
-            name: 'appName',
-            getter: (app) => app.appName,
-            weight: 1.0,
-          ),
-          WeightedKey(
-            name: 'packageName',
-            getter: (app) => app.packageName,
-            weight: 0.5,
-          ),
-          WeightedKey(
-            name: 'systemAppName',
-            getter: (app) => app.systemAppName ?? '',
-            weight: 0.8,
-          ),
-        ],
-        threshold: AppConstants.searchThreshold,
-        shouldSort: true,
-      ),
-    );
-  }
-
-  Future<void> _loadApps() async {
-    _setLoading(true);
+  Future<void> initializeProvider() async {
+    if (_isInitialized) return;
     
+    _isLoading = true;
+    notifyListeners();
+
     try {
-      // Load preferences
-      _prefs = await SharedPreferences.getInstance();
-      await _loadSettings();
+      await _initializeDatabase();
+      await _loadAppsFromCache();
       
-      // Get installed apps
-      final installedApps = await InstalledApps.getInstalledApps(
-        false, // include system apps
-        true, // include icons
-        '', // no package name prefix filter
-      );
-
-      // Convert to AppInfo objects and filter out only essential system apps
-      _allApps = [];
-      for (var app in installedApps) {
-        if (!_shouldHideApp(app)) {
-          final appInfo = AppInfo.fromInstalledApp(app);
-          _allApps.add(appInfo);
-        }
+      // If cache is empty or outdated, refresh from system
+      if (_allApps.isEmpty || await _shouldRefreshCache()) {
+        await refreshApps();
+      } else {
+        _updateFilteredApps();
+        _updateFavoriteApps();
+        _updateMostUsedApps();
       }
-
-      // Load stored app data (launch counts, favorites, etc.)
-      await _loadStoredAppData();
       
-      // Sort apps by usage and name
-      _sortApps();
-      
-      // Initialize filtered apps
-      _filteredApps = List.from(_allApps);
-      
-      // Update fuzzy searcher
-      _initializeFuzzySearcher();
-      
-      // Load favorites and most used
-      _updateFavoriteApps();
-      _updateMostUsedApps();
-      
+      _isInitialized = true;
     } catch (e) {
-      debugPrint('Error loading apps: $e');
+      debugPrint('Error initializing AppProvider: $e');
+      await refreshApps(); // Fallback to fresh load
     } finally {
-      _setLoading(false);
+      _isLoading = false;
+      notifyListeners();
     }
   }
 
-  bool _shouldHideApp(installed_apps.AppInfo app) {
-    // Only hide problematic packages that shouldn't be launched
-    final hidePackages = [
-      'com.android.launcher',
-      'com.google.android.launcher', 
-      'com.sec.android.app.launcher',
-      'com.miui.home',
-      'com.oneplus.launcher',
-      'com.android.packageinstaller',
-      'com.android.vending', // Play Store backend
-      'com.google.android.gms', // Google Play Services
-      'com.android.shell',
-      'com.android.systemui',
-    ];
+  Future<void> _initializeDatabase() async {
+    final databasesPath = await getDatabasesPath();
+    final path = join(databasesPath, 'speed_drawer.db');
+
+    _database = await openDatabase(
+      path,
+      version: 1,
+      onCreate: (db, version) async {
+        await db.execute('''
+          CREATE TABLE apps (
+            packageName TEXT PRIMARY KEY,
+            appName TEXT NOT NULL,
+            icon BLOB,
+            isSystemApp INTEGER NOT NULL DEFAULT 0,
+            isEnabled INTEGER NOT NULL DEFAULT 1,
+            versionName TEXT,
+            versionCode INTEGER,
+            usageCount INTEGER NOT NULL DEFAULT 0,
+            lastUsed TEXT NOT NULL,
+            isFavorite INTEGER NOT NULL DEFAULT 0,
+            isHidden INTEGER NOT NULL DEFAULT 0,
+            customName TEXT,
+            cachedAt TEXT NOT NULL
+          )
+        ''');
+
+        await db.execute('''
+          CREATE INDEX idx_apps_usage ON apps(usageCount DESC, lastUsed DESC);
+        ''');
+
+        await db.execute('''
+          CREATE INDEX idx_apps_favorites ON apps(isFavorite DESC);
+        ''');
+      },
+    );
+  }
+
+  Future<void> _loadAppsFromCache() async {
+    if (_database == null) return;
+
+    try {
+      final List<Map<String, dynamic>> maps = await _database!.query(
+        'apps',
+        where: 'isHidden = ?',
+        whereArgs: [0],
+        orderBy: 'appName COLLATE NOCASE ASC',
+      );
+
+      _allApps = maps.map((map) {
+        return AppInfo(
+          packageName: map['packageName'],
+          appName: map['appName'],
+          icon: map['icon'] != null ? base64Encode(map['icon']) : null,
+          isSystemApp: map['isSystemApp'] == 1,
+          isEnabled: map['isEnabled'] == 1,
+          versionName: map['versionName'],
+          versionCode: map['versionCode'],
+          usageCount: map['usageCount'],
+          lastUsed: DateTime.parse(map['lastUsed']),
+          isFavorite: map['isFavorite'] == 1,
+          isHidden: map['isHidden'] == 1,
+          customName: map['customName'],
+        );
+      }).toList();
+
+      debugPrint('Loaded ${_allApps.length} apps from cache');
+    } catch (e) {
+      debugPrint('Error loading apps from cache: $e');
+      _allApps = [];
+    }
+  }
+
+  Future<bool> _shouldRefreshCache() async {
+    final prefs = await SharedPreferences.getInstance();
+    final lastRefresh = prefs.getString('last_cache_refresh');
     
-    // Hide if package name contains any of the problematic patterns
-    return hidePackages.any((pkg) => app.packageName.contains(pkg)) ||
-           app.name.isEmpty || // Hide apps with no name
-           app.packageName.startsWith('com.android.internal'); // Hide internal Android packages
+    if (lastRefresh == null) return true;
+    
+    final lastRefreshTime = DateTime.tryParse(lastRefresh);
+    if (lastRefreshTime == null) return true;
+    
+    return DateTime.now().difference(lastRefreshTime) > AppConstants.cacheRefreshInterval;
   }
 
-  void _setLoading(bool loading) {
-    _isLoading = loading;
+  Future<void> refreshApps() async {
+    _isLoading = true;
     notifyListeners();
+
+    try {
+      final List<Application> installedApps = await DeviceApps.getInstalledApplications(
+        includeAppIcons: true,
+        includeSystemApps: true,
+        onlyAppsWithLaunchIntent: true,
+      );
+
+      // Merge with existing app data
+      final Map<String, AppInfo> existingApps = {
+        for (var app in _allApps) app.packageName: app
+      };
+
+      _allApps = installedApps.map((app) {
+        final existing = existingApps[app.packageName];
+        if (existing != null) {
+          // Update existing app with new system data
+          return existing.copyWith(
+            appName: app.appName,
+            isSystemApp: app.systemApp,
+            isEnabled: app.enabled,
+            versionName: app.versionName,
+            versionCode: app.versionCode,
+            icon: app is ApplicationWithIcon ? base64Encode(app.icon) : existing.icon,
+          );
+        } else {
+          // Create new app info
+          return AppInfo.fromApplication(app);
+        }
+      }).where((app) => !app.isHidden).toList();
+
+      // Sort alphabetically
+      _allApps.sort((a, b) => a.displayName.toLowerCase().compareTo(b.displayName.toLowerCase()));
+
+      await _saveAppsToCache();
+      _updateFilteredApps();
+      _updateFavoriteApps();
+      _updateMostUsedApps();
+
+      // Update refresh timestamp
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('last_cache_refresh', DateTime.now().toIso8601String());
+
+      debugPrint('Refreshed ${_allApps.length} apps');
+    } catch (e) {
+      debugPrint('Error refreshing apps: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
-  void _sortApps() {
-    _allApps.sort((a, b) {
-      // First sort by favorites
-      if (a.isFavorite && !b.isFavorite) return -1;
-      if (!a.isFavorite && b.isFavorite) return 1;
+  Future<void> _saveAppsToCache() async {
+    if (_database == null) return;
+
+    try {
+      final batch = _database!.batch();
       
-      // Then by launch count
-      final countComparison = b.launchCount.compareTo(a.launchCount);
-      if (countComparison != 0) return countComparison;
+      // Clear existing cache
+      batch.delete('apps');
       
-      // Finally by name
-      return a.displayName.toLowerCase().compareTo(b.displayName.toLowerCase());
+      // Insert all apps
+      for (final app in _allApps) {
+        batch.insert('apps', {
+          'packageName': app.packageName,
+          'appName': app.appName,
+          'icon': app.icon != null ? base64Decode(app.icon!) : null,
+          'isSystemApp': app.isSystemApp ? 1 : 0,
+          'isEnabled': app.isEnabled ? 1 : 0,
+          'versionName': app.versionName,
+          'versionCode': app.versionCode,
+          'usageCount': app.usageCount,
+          'lastUsed': app.lastUsed.toIso8601String(),
+          'isFavorite': app.isFavorite ? 1 : 0,
+          'isHidden': app.isHidden ? 1 : 0,
+          'customName': app.customName,
+          'cachedAt': DateTime.now().toIso8601String(),
+        });
+      }
+      
+      await batch.commit(noResult: true);
+      debugPrint('Saved ${_allApps.length} apps to cache');
+    } catch (e) {
+      debugPrint('Error saving apps to cache: $e');
+    }
+  }
+
+  void searchApps(String query) {
+    _searchQuery = query;
+    
+    _searchDebouncer?.cancel();
+    _searchDebouncer = Timer(const Duration(milliseconds: AppConstants.searchDebounceMs), () {
+      _updateFilteredApps();
+      notifyListeners();
     });
   }
 
-  Future<void> _loadStoredAppData() async {
-    if (_prefs == null) return;
-    
-    // Load favorites
-    final favoritePackages = _prefs!.getStringList(AppConstants.favoriteAppsKey) ?? [];
-    
-    // Load most used apps data
-    final mostUsedData = _prefs!.getString(AppConstants.mostUsedAppsKey);
-    Map<String, dynamic> usageData = {};
-    if (mostUsedData != null) {
-      try {
-        usageData = jsonDecode(mostUsedData);
-      } catch (e) {
-        debugPrint('Error parsing usage data: $e');
-      }
-    }
-    
-    // Update app data
-    for (var app in _allApps) {
-      app.isFavorite = favoritePackages.contains(app.packageName);
-      
-      if (usageData.containsKey(app.packageName)) {
-        final data = usageData[app.packageName];
-        if (data != null) {
-          app.launchCount = data['launchCount'] ?? 0;
-          app.lastLaunchTime = data['lastLaunchTime'] ?? 0;
-        }
-      }
-    }
-  }
-
-  Future<void> _saveAppData() async {
-    if (_prefs == null) return;
-    
-    // Save favorites
-    final favoritePackages = _allApps
-        .where((app) => app.isFavorite)
-        .map((app) => app.packageName)
-        .toList();
-    await _prefs!.setStringList(AppConstants.favoriteAppsKey, favoritePackages);
-    
-    // Save usage data
-    final usageData = <String, dynamic>{};
-    for (var app in _allApps) {
-      if (app.launchCount > 0) {
-        usageData[app.packageName] = {
-          'launchCount': app.launchCount,
-          'lastLaunchTime': app.lastLaunchTime,
-        };
-      }
-    }
-    await _prefs!.setString(AppConstants.mostUsedAppsKey, jsonEncode(usageData));
-  }
-
-  Future<void> _loadSettings() async {
-    if (_prefs == null) return;
-    
-    _fuzzySearchEnabled = _prefs!.getBool(AppConstants.fuzzySearchKey) ?? true;
-    _showMostUsed = _prefs!.getBool(AppConstants.showMostUsedKey) ?? true;
-    _autoFocus = _prefs!.getBool(AppConstants.autoFocusKey) ?? true;
-    _searchHistory = _prefs!.getStringList(AppConstants.searchHistoryKey) ?? [];
-  }
-
-  void search(String query) {
-    _searchQuery = query.trim();
-    
-    // Debounce search for performance
-    _debounceTimer?.cancel();
-    _debounceTimer = Timer(
-      Duration(milliseconds: AppConstants.debounceDelayMs),
-      () => _performSearch(),
-    );
-  }
-
-  void _performSearch() {
+  void _updateFilteredApps() {
     if (_searchQuery.isEmpty) {
       _filteredApps = List.from(_allApps);
     } else {
-      if (_fuzzySearchEnabled && _searchQuery.length >= AppConstants.minSearchLength) {
-        // Use fuzzy search
-        final results = _fuzzySearcher.search(_searchQuery);
-        _filteredApps = results
-            .take(AppConstants.maxSearchResults)
-            .map((result) => result.item)
-            .toList();
-      } else {
-        // Use simple contains search
-        _filteredApps = _allApps
-            .where((app) => app.matchesQuery(_searchQuery))
-            .take(AppConstants.maxSearchResults)
-            .toList();
-      }
+      final query = _searchQuery.toLowerCase();
+      _filteredApps = _allApps.where((app) {
+        return app.displayName.toLowerCase().contains(query) ||
+               app.packageName.toLowerCase().contains(query);
+      }).toList();
       
-      // Add to search history
-      _addToSearchHistory(_searchQuery);
-    }
-    
-    notifyListeners();
-  }
-
-  void _addToSearchHistory(String query) {
-    if (query.isEmpty) return;
-    
-    _searchHistory.remove(query); // Remove if already exists
-    _searchHistory.insert(0, query); // Add to beginning
-    
-    // Limit history size
-    if (_searchHistory.length > AppConstants.maxSearchHistory) {
-      _searchHistory = _searchHistory.take(AppConstants.maxSearchHistory).toList();
-    }
-    
-    // Save to preferences
-    _prefs?.setStringList(AppConstants.searchHistoryKey, _searchHistory);
-  }
-
-  Future<bool> launchApp(AppInfo app) async {
-    try {
-      final launched = await InstalledApps.startApp(app.packageName);
-      if (launched == true) {
-        // Update usage statistics
-        app.launchCount++;
-        app.lastLaunchTime = DateTime.now().millisecondsSinceEpoch;
-        
-        // Re-sort apps
-        _sortApps();
-        _updateMostUsedApps();
-        
-        // Save data
-        await _saveAppData();
-        
-        // Clear search
-        clearSearch();
-        
-        // Provide haptic feedback
-        HapticFeedback.lightImpact();
-        
-        notifyListeners();
-        return true;
+      // Limit results for performance
+      if (_filteredApps.length > AppConstants.maxSearchResults) {
+        _filteredApps = _filteredApps.take(AppConstants.maxSearchResults).toList();
       }
-    } catch (e) {
-      debugPrint('Error launching app ${app.packageName}: $e');
     }
-    return false;
-  }
-
-  void toggleFavorite(AppInfo app) {
-    app.isFavorite = !app.isFavorite;
-    _sortApps();
-    _updateFavoriteApps();
-    _saveAppData();
-    notifyListeners();
   }
 
   void _updateFavoriteApps() {
@@ -317,64 +265,140 @@ class AppProvider extends ChangeNotifier {
   }
 
   void _updateMostUsedApps() {
-    _mostUsedApps = _allApps
-        .where((app) => app.launchCount > 0)
-        .take(AppConstants.maxMostUsedApps)
-        .toList();
+    final usedApps = _allApps.where((app) => app.usageCount > 0).toList();
+    usedApps.sort((a, b) {
+      final usageComparison = b.usageCount.compareTo(a.usageCount);
+      if (usageComparison != 0) return usageComparison;
+      return b.lastUsed.compareTo(a.lastUsed);
+    });
+    _mostUsedApps = usedApps.take(AppConstants.mostUsedCount).toList();
+  }
+
+  Future<void> launchApp(AppInfo app) async {
+    try {
+      final launched = await DeviceApps.openApp(app.packageName);
+      if (launched) {
+        app.incrementUsage();
+        await _updateAppInCache(app);
+        _updateMostUsedApps();
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Error launching app ${app.packageName}: $e');
+    }
+  }
+
+  Future<void> toggleFavorite(AppInfo app) async {
+    app.toggleFavorite();
+    await _updateAppInCache(app);
+    _updateFavoriteApps();
+    notifyListeners();
+  }
+
+  Future<void> hideApp(AppInfo app) async {
+    app.toggleHidden();
+    _allApps.removeWhere((a) => a.packageName == app.packageName);
+    await _updateAppInCache(app);
+    _updateFilteredApps();
+    _updateFavoriteApps();
+    _updateMostUsedApps();
+    notifyListeners();
+  }
+
+  Future<void> renameApp(AppInfo app, String newName) async {
+    app.setCustomName(newName);
+    await _updateAppInCache(app);
+    
+    // Re-sort if the name changed
+    _allApps.sort((a, b) => a.displayName.toLowerCase().compareTo(b.displayName.toLowerCase()));
+    _updateFilteredApps();
+    notifyListeners();
+  }
+
+  Future<void> _updateAppInCache(AppInfo app) async {
+    if (_database == null) return;
+
+    try {
+      await _database!.update(
+        'apps',
+        {
+          'usageCount': app.usageCount,
+          'lastUsed': app.lastUsed.toIso8601String(),
+          'isFavorite': app.isFavorite ? 1 : 0,
+          'isHidden': app.isHidden ? 1 : 0,
+          'customName': app.customName,
+        },
+        where: 'packageName = ?',
+        whereArgs: [app.packageName],
+      );
+    } catch (e) {
+      debugPrint('Error updating app in cache: $e');
+    }
+  }
+
+  Future<void> openAppInfo(AppInfo app) async {
+    try {
+      final intent = AndroidIntent(
+        action: 'android.settings.APPLICATION_DETAILS_SETTINGS',
+        data: 'package:${app.packageName}',
+      );
+      await intent.launch();
+    } catch (e) {
+      debugPrint('Error opening app info: $e');
+    }
+  }
+
+  Future<void> uninstallApp(AppInfo app) async {
+    try {
+      if (app.isSystemApp) {
+        // For system apps, just hide them
+        await hideApp(app);
+        return;
+      }
+
+      final intent = AndroidIntent(
+        action: 'android.intent.action.DELETE',
+        data: 'package:${app.packageName}',
+      );
+      await intent.launch();
+    } catch (e) {
+      debugPrint('Error uninstalling app: $e');
+    }
+  }
+
+  Future<void> createShortcut(AppInfo app) async {
+    try {
+      // Request permission for shortcut creation
+      if (await Permission.systemAlertWindow.request().isGranted) {
+        final intent = AndroidIntent(
+          action: 'com.android.launcher.action.INSTALL_SHORTCUT',
+          arguments: {
+            'android.intent.extra.shortcut.INTENT': {
+              'action': 'android.intent.action.MAIN',
+              'category': 'android.intent.category.LAUNCHER',
+              'component': app.packageName,
+            },
+            'android.intent.extra.shortcut.NAME': app.displayName,
+            'duplicate': false,
+          },
+        );
+        await intent.launch();
+      }
+    } catch (e) {
+      debugPrint('Error creating shortcut: $e');
+    }
   }
 
   void clearSearch() {
     _searchQuery = '';
-    _filteredApps = List.from(_allApps);
+    _updateFilteredApps();
     notifyListeners();
-  }
-
-  void clearSearchHistory() {
-    _searchHistory.clear();
-    _prefs?.setStringList(AppConstants.searchHistoryKey, []);
-    notifyListeners();
-  }
-
-  // Settings methods
-  void setFuzzySearch(bool enabled) {
-    _fuzzySearchEnabled = enabled;
-    _prefs?.setBool(AppConstants.fuzzySearchKey, enabled);
-    if (_searchQuery.isNotEmpty) {
-      _performSearch(); // Re-search with new settings
-    }
-    notifyListeners();
-  }
-
-  void setShowMostUsed(bool show) {
-    _showMostUsed = show;
-    _prefs?.setBool(AppConstants.showMostUsedKey, show);
-    notifyListeners();
-  }
-
-  void setAutoFocus(bool autoFocus) {
-    _autoFocus = autoFocus;
-    _prefs?.setBool(AppConstants.autoFocusKey, autoFocus);
-    notifyListeners();
-  }
-
-  Future<void> refreshApps() async {
-    await _loadApps();
-  }
-
-  // Get apps for display based on current state
-  List<AppInfo> getDisplayApps() {
-    if (_searchQuery.isNotEmpty) {
-      return _filteredApps;
-    } else if (_showMostUsed && _mostUsedApps.isNotEmpty) {
-      return _mostUsedApps;
-    } else {
-      return _favoriteApps.isNotEmpty ? _favoriteApps : _allApps.take(20).toList();
-    }
   }
 
   @override
   void dispose() {
-    _debounceTimer?.cancel();
+    _searchDebouncer?.cancel();
+    _database?.close();
     super.dispose();
   }
 } 

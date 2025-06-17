@@ -1,170 +1,103 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-
-import '../providers/app_provider.dart';
-import '../providers/theme_provider.dart';
-import '../providers/settings_provider.dart';
-import '../utils/constants.dart';
+import '../models/app_info.dart';
+import 'app_item_widget.dart';
 
 class QuickActionsWidget extends StatelessWidget {
-  final Function(String) onSearchHistoryTap;
+  final List<AppInfo> favoriteApps;
+  final List<AppInfo> mostUsedApps;
+  final Function(AppInfo) onAppTap;
+  final Function(AppInfo) onAppLongPress;
 
   const QuickActionsWidget({
     super.key,
-    required this.onSearchHistoryTap,
+    required this.favoriteApps,
+    required this.mostUsedApps,
+    required this.onAppTap,
+    required this.onAppLongPress,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Consumer3<AppProvider, ThemeProvider, SettingsProvider>(
-      builder: (context, appProvider, themeProvider, settingsProvider, child) {
-        final hasSearchHistory = appProvider.searchHistory.isNotEmpty && settingsProvider.showSearchHistory;
-        final hasFavorites = appProvider.favoriteApps.isNotEmpty;
-
-        if (!hasSearchHistory && !hasFavorites) {
-          return const SizedBox.shrink();
-        }
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Favorites section
-            if (hasFavorites) ...[
-              _buildSectionHeader(context, 'Favorites', themeProvider),
-              const SizedBox(height: AppConstants.paddingSmall),
-              _buildFavoriteApps(context, appProvider, themeProvider),
-              if (hasSearchHistory) const SizedBox(height: AppConstants.paddingMedium),
-            ],
-
-            // Search history section
-            if (hasSearchHistory) ...[
-              _buildSectionHeader(context, 'Recent Searches', themeProvider),
-              const SizedBox(height: AppConstants.paddingSmall),
-              _buildSearchHistory(context, appProvider, themeProvider),
-            ],
-          ],
-        );
-      },
+    final theme = Theme.of(context);
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Favorites Section
+        if (favoriteApps.isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.favorite,
+                  size: 20,
+                  color: theme.colorScheme.primary,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Favorites',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          _buildHorizontalAppList(favoriteApps),
+        ],
+        
+        // Most Used Section
+        if (mostUsedApps.isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.trending_up,
+                  size: 20,
+                  color: theme.colorScheme.secondary,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Most Used',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.secondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          _buildHorizontalAppList(mostUsedApps),
+        ],
+      ],
     );
   }
 
-  Widget _buildSectionHeader(
-    BuildContext context,
-    String title,
-    ThemeProvider themeProvider,
-  ) {
-    return Text(
-      title,
-      style: TextStyle(
-        color: themeProvider.getTextColor(context).withOpacity(0.7),
-        fontSize: 14,
-        fontWeight: FontWeight.w600,
-      ),
-    );
-  }
-
-  Widget _buildFavoriteApps(
-    BuildContext context,
-    AppProvider appProvider,
-    ThemeProvider themeProvider,
-  ) {
-    return SizedBox(
-      height: 60,
+  Widget _buildHorizontalAppList(List<AppInfo> apps) {
+    return Container(
+      height: 100,
+      margin: const EdgeInsets.only(bottom: 16),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        itemCount: appProvider.favoriteApps.length,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: apps.length,
         itemBuilder: (context, index) {
-          final app = appProvider.favoriteApps[index];
-          return Padding(
-            padding: EdgeInsets.only(
-              right: index < appProvider.favoriteApps.length - 1
-                  ? AppConstants.paddingMedium
-                  : 0,
-            ),
-            child: GestureDetector(
-              onTap: () => appProvider.launchApp(app),
-              child: Column(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: app.icon != null
-                          ? Image.memory(
-                              app.icon!,
-                              fit: BoxFit.cover,
-                            )
-                          : Container(
-                              color: themeProvider.getSurfaceColor(context),
-                              child: Icon(
-                                Icons.android,
-                                size: 24,
-                                color: themeProvider.getTextColor(context).withOpacity(0.5),
-                              ),
-                            ),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  SizedBox(
-                    width: 40,
-                    child: Text(
-                      app.displayName,
-                      style: TextStyle(
-                        color: themeProvider.getTextColor(context),
-                        fontSize: 10,
-                      ),
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
+          final app = apps[index];
+          return Container(
+            width: 80,
+            margin: const EdgeInsets.only(right: 12),
+            child: AppItemWidget(
+              app: app,
+              iconSize: 48,
+              onTap: () => onAppTap(app),
+              onLongPress: () => onAppLongPress(app),
             ),
           );
         },
       ),
-    );
-  }
-
-  Widget _buildSearchHistory(
-    BuildContext context,
-    AppProvider appProvider,
-    ThemeProvider themeProvider,
-  ) {
-    return Wrap(
-      spacing: AppConstants.paddingSmall,
-      runSpacing: AppConstants.paddingSmall,
-      children: appProvider.searchHistory.take(6).map((query) {
-        return GestureDetector(
-          onTap: () => onSearchHistoryTap(query),
-          child: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 6,
-            ),
-            decoration: BoxDecoration(
-              color: themeProvider.getSurfaceColor(context),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: themeProvider.getTextColor(context).withOpacity(0.2),
-                width: 1,
-              ),
-            ),
-            child: Text(
-              query,
-              style: TextStyle(
-                color: themeProvider.getTextColor(context),
-                fontSize: 12,
-              ),
-            ),
-          ),
-        );
-      }).toList(),
     );
   }
 } 
