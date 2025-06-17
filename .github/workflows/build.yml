@@ -119,46 +119,34 @@ jobs:
       run: |
         VERSION="v1.0.$(date +%Y%m%d%H%M%S)"
         echo "version=${VERSION}" >> $GITHUB_OUTPUT
+        echo "Generated version: ${VERSION}"
       
-    - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
+    - name: Create Release with gh CLI
+      run: |
+        gh release create ${{ steps.version.outputs.version }} \
+          --title "Speed Drawer ${{ steps.version.outputs.version }}" \
+          --notes "## Speed Drawer ${{ steps.version.outputs.version }}
+
+        High-performance custom app drawer focused on speed and productivity.
+
+        ### Features
+        - ⚡ Instant search with keyboard auto-focus
+        - 🔍 Fuzzy search with partial matching
+        - ❤️ Favorite apps management
+        - 🎨 Customizable themes and icon sizes
+        - 📱 Optimized for performance
+        - 🏠 Can replace default launcher
+
+        ### Installation
+        1. Download the APK file below
+        2. Enable \"Install from unknown sources\" in Android settings
+        3. Install the APK
+        4. Set as default launcher (optional)
+
+        ### Requirements
+        - Android 6.0 (API level 23) or higher" \
+          --draft=false \
+          --prerelease=false \
+          ./app-release.apk
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ steps.version.outputs.version }}
-        release_name: Speed Drawer ${{ steps.version.outputs.version }}
-        body: |
-          ## Speed Drawer ${{ steps.version.outputs.version }}
-          
-          High-performance custom app drawer focused on speed and productivity.
-          
-          ### Features
-          - ⚡ Instant search with keyboard auto-focus
-          - 🔍 Fuzzy search with partial matching
-          - ❤️ Favorite apps management
-          - 🎨 Customizable themes and icon sizes
-          - 📱 Optimized for performance
-          - 🏠 Can replace default launcher
-          
-          ### Installation
-          1. Download the APK file below
-          2. Enable "Install from unknown sources" in Android settings
-          3. Install the APK
-          4. Set as default launcher (optional)
-          
-          ### Requirements
-          - Android 6.0 (API level 23) or higher
-          
-        draft: false
-        prerelease: false
-        
-    - name: Upload Release Asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./app-release.apk
-        asset_name: speed-drawer-${{ steps.version.outputs.version }}.apk
-        asset_content_type: application/vnd.android.package-archive 
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
