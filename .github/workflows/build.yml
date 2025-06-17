@@ -87,10 +87,7 @@ jobs:
       run: |
         echo "Building APK..."
         flutter build apk --release \
-          --dart-define=flutter.inspector.structuredErrors=false \
-          --shrink \
-          --split-debug-info=build/app/outputs/symbols \
-          --obfuscate
+          --dart-define=flutter.inspector.structuredErrors=false
         echo "APK built successfully"
       env:
         GRADLE_OPTS: -Xmx4g -XX:+UseG1GC -XX:MaxMetaspaceSize=1g
@@ -103,12 +100,7 @@ jobs:
         path: build/app/outputs/flutter-apk/app-release.apk
         retention-days: 30
         
-    - name: Upload symbols
-      uses: actions/upload-artifact@v4
-      with:
-        name: debug-symbols
-        path: build/app/outputs/symbols/
-        retention-days: 30
+
 
   release:
     name: Create Release

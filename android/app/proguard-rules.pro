@@ -4,9 +4,14 @@
 -keep class io.flutter.** { *; }
 -keep class dart.** { *; }
 
-# Keep device_apps plugin classes
--keep class com.example.device_apps.** { *; }
--keep class fr.g123k.deviceapps.** { *; }
+# Keep installed_apps plugin classes
+-keep class fr.dhiraj.installed_apps.** { *; }
+
+# Keep Google Play Core classes
+-keep class com.google.android.play.core.** { *; }
+-keep class com.google.android.play.core.splitcompat.** { *; }
+-keep class com.google.android.play.core.splitinstall.** { *; }
+-keep class com.google.android.play.core.tasks.** { *; }
 
 # Keep shared_preferences plugin
 -keep class io.flutter.plugins.sharedpreferences.** { *; }
