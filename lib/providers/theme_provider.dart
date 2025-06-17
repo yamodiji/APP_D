@@ -5,7 +5,7 @@ import '../utils/constants.dart';
 class ThemeProvider extends ChangeNotifier {
   final SharedPreferences _prefs;
   
-  ThemeMode _themeMode = ThemeMode.dark;
+  ThemeMode _themeMode = ThemeMode.system;
   double _iconSize = AppConstants.mediumIconSize;
   double _backgroundOpacity = 0.9;
 
@@ -145,7 +145,7 @@ class ThemeProvider extends ChangeNotifier {
     if (themeString != null) {
       _themeMode = ThemeMode.values.firstWhere(
         (mode) => mode.toString() == themeString,
-        orElse: () => ThemeMode.dark,
+        orElse: () => ThemeMode.system,
       );
     }
 

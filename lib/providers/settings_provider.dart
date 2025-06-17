@@ -10,6 +10,8 @@ class SettingsProvider extends ChangeNotifier {
   bool _autoFocus = true;
   bool _fuzzySearch = true;
   bool _showMostUsed = true;
+  bool _showKeyboard = true;
+  bool _showSearchHistory = true;
   double _iconSize = AppConstants.mediumIconSize;
   double _backgroundOpacity = 0.9;
 
@@ -23,6 +25,8 @@ class SettingsProvider extends ChangeNotifier {
   bool get autoFocus => _autoFocus;
   bool get fuzzySearch => _fuzzySearch;
   bool get showMostUsed => _showMostUsed;
+  bool get showKeyboard => _showKeyboard;
+  bool get showSearchHistory => _showSearchHistory;
   double get iconSize => _iconSize;
   double get backgroundOpacity => _backgroundOpacity;
 
@@ -33,6 +37,8 @@ class SettingsProvider extends ChangeNotifier {
     _autoFocus = _prefs.getBool(AppConstants.autoFocusKey) ?? true;
     _fuzzySearch = _prefs.getBool(AppConstants.fuzzySearchKey) ?? true;
     _showMostUsed = _prefs.getBool(AppConstants.showMostUsedKey) ?? true;
+    _showKeyboard = _prefs.getBool(AppConstants.showKeyboardKey) ?? true;
+    _showSearchHistory = _prefs.getBool(AppConstants.showSearchHistoryKey) ?? true;
     _iconSize = _prefs.getDouble(AppConstants.iconSizeKey) ?? AppConstants.mediumIconSize;
     _backgroundOpacity = _prefs.getDouble(AppConstants.backgroundOpacityKey) ?? 0.9;
   }
@@ -69,6 +75,20 @@ class SettingsProvider extends ChangeNotifier {
   void setShowMostUsed(bool enabled) {
     _showMostUsed = enabled;
     _prefs.setBool(AppConstants.showMostUsedKey, enabled);
+    notifyListeners();
+  }
+
+  // Show keyboard settings
+  void setShowKeyboard(bool enabled) {
+    _showKeyboard = enabled;
+    _prefs.setBool(AppConstants.showKeyboardKey, enabled);
+    notifyListeners();
+  }
+
+  // Show search history settings
+  void setShowSearchHistory(bool enabled) {
+    _showSearchHistory = enabled;
+    _prefs.setBool(AppConstants.showSearchHistoryKey, enabled);
     notifyListeners();
   }
 
@@ -111,6 +131,8 @@ class SettingsProvider extends ChangeNotifier {
     _autoFocus = true;
     _fuzzySearch = true;
     _showMostUsed = true;
+    _showKeyboard = true;
+    _showSearchHistory = true;
     _iconSize = AppConstants.mediumIconSize;
     _backgroundOpacity = 0.9;
 
@@ -120,6 +142,8 @@ class SettingsProvider extends ChangeNotifier {
     _prefs.setBool(AppConstants.autoFocusKey, _autoFocus);
     _prefs.setBool(AppConstants.fuzzySearchKey, _fuzzySearch);
     _prefs.setBool(AppConstants.showMostUsedKey, _showMostUsed);
+    _prefs.setBool(AppConstants.showKeyboardKey, _showKeyboard);
+    _prefs.setBool(AppConstants.showSearchHistoryKey, _showSearchHistory);
     _prefs.setDouble(AppConstants.iconSizeKey, _iconSize);
     _prefs.setDouble(AppConstants.backgroundOpacityKey, _backgroundOpacity);
 
@@ -134,6 +158,8 @@ class SettingsProvider extends ChangeNotifier {
       'autoFocus': _autoFocus,
       'fuzzySearch': _fuzzySearch,
       'showMostUsed': _showMostUsed,
+      'showKeyboard': _showKeyboard,
+      'showSearchHistory': _showSearchHistory,
       'iconSize': _iconSize,
       'backgroundOpacity': _backgroundOpacity,
     };
@@ -146,6 +172,8 @@ class SettingsProvider extends ChangeNotifier {
     _autoFocus = settings['autoFocus'] ?? true;
     _fuzzySearch = settings['fuzzySearch'] ?? true;
     _showMostUsed = settings['showMostUsed'] ?? true;
+    _showKeyboard = settings['showKeyboard'] ?? true;
+    _showSearchHistory = settings['showSearchHistory'] ?? true;
     _iconSize = settings['iconSize']?.toDouble() ?? AppConstants.mediumIconSize;
     _backgroundOpacity = settings['backgroundOpacity']?.toDouble() ?? 0.9;
 
@@ -155,6 +183,8 @@ class SettingsProvider extends ChangeNotifier {
     _prefs.setBool(AppConstants.autoFocusKey, _autoFocus);
     _prefs.setBool(AppConstants.fuzzySearchKey, _fuzzySearch);
     _prefs.setBool(AppConstants.showMostUsedKey, _showMostUsed);
+    _prefs.setBool(AppConstants.showKeyboardKey, _showKeyboard);
+    _prefs.setBool(AppConstants.showSearchHistoryKey, _showSearchHistory);
     _prefs.setDouble(AppConstants.iconSizeKey, _iconSize);
     _prefs.setDouble(AppConstants.backgroundOpacityKey, _backgroundOpacity);
 

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../providers/app_provider.dart';
 import '../providers/theme_provider.dart';
+import '../providers/settings_provider.dart';
 import '../utils/constants.dart';
 
 class QuickActionsWidget extends StatelessWidget {
@@ -15,9 +16,9 @@ class QuickActionsWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer2<AppProvider, ThemeProvider>(
-      builder: (context, appProvider, themeProvider, child) {
-        final hasSearchHistory = appProvider.searchHistory.isNotEmpty;
+    return Consumer3<AppProvider, ThemeProvider, SettingsProvider>(
+      builder: (context, appProvider, themeProvider, settingsProvider, child) {
+        final hasSearchHistory = appProvider.searchHistory.isNotEmpty && settingsProvider.showSearchHistory;
         final hasFavorites = appProvider.favoriteApps.isNotEmpty;
 
         if (!hasSearchHistory && !hasFavorites) {

@@ -91,6 +91,22 @@ class SettingsDrawer extends StatelessWidget {
                       ),
                       _buildSwitchSetting(
                         context,
+                        'Show Keyboard',
+                        'Show keyboard automatically when opening the app',
+                        settingsProvider.showKeyboard,
+                        (value) => settingsProvider.setShowKeyboard(value),
+                        themeProvider,
+                      ),
+                      _buildSwitchSetting(
+                        context,
+                        'Show Search History',
+                        'Display previous searches for quick access',
+                        settingsProvider.showSearchHistory,
+                        (value) => settingsProvider.setShowSearchHistory(value),
+                        themeProvider,
+                      ),
+                      _buildSwitchSetting(
+                        context,
                         'Fuzzy Search',
                         'Enable smart search with partial matches',
                         settingsProvider.fuzzySearch,
@@ -126,13 +142,14 @@ class SettingsDrawer extends StatelessWidget {
 
                       // Data section
                       _buildSectionHeader(context, 'Data', themeProvider),
-                      _buildActionButton(
-                        context,
-                        'Clear Search History',
-                        Icons.history,
-                        () => appProvider.clearSearchHistory(),
-                        themeProvider,
-                      ),
+                      if (settingsProvider.showSearchHistory)
+                        _buildActionButton(
+                          context,
+                          'Clear Search History',
+                          Icons.history,
+                          () => appProvider.clearSearchHistory(),
+                          themeProvider,
+                        ),
                       _buildActionButton(
                         context,
                         'Refresh Apps',

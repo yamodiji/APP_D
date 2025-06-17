@@ -13,6 +13,8 @@ class AppConstants {
   static const String autoFocusKey = 'auto_focus';
   static const String vibrationKey = 'vibration';
   static const String animationsKey = 'animations';
+  static const String showKeyboardKey = 'show_keyboard';
+  static const String showSearchHistoryKey = 'show_search_history';
 
   // Performance constants
   static const int maxSearchResults = 50;

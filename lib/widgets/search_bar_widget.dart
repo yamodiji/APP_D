@@ -54,7 +54,7 @@ class SearchBarWidget extends StatelessWidget {
                 child: TextField(
                   controller: controller,
                   focusNode: focusNode,
-                  autofocus: settingsProvider.autoFocus,
+                  autofocus: settingsProvider.autoFocus && settingsProvider.showKeyboard,
                   style: TextStyle(
                     color: themeProvider.getTextColor(context),
                     fontSize: 16,
@@ -73,7 +73,9 @@ class SearchBarWidget extends StatelessWidget {
                   textInputAction: TextInputAction.search,
                   onSubmitted: (value) {
                     // Keep focus on search bar after submit
-                    focusNode.requestFocus();
+                    if (settingsProvider.showKeyboard) {
+                      focusNode.requestFocus();
+                    }
                   },
                 ),
               ),
