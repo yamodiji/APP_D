@@ -107,6 +107,14 @@ class SettingsDrawer extends StatelessWidget {
                       ),
                       _buildSwitchSetting(
                         context,
+                        'Clear Search on Close',
+                        'Clear search text when app is closed or minimized',
+                        settingsProvider.clearSearchOnClose,
+                        (value) => settingsProvider.setClearSearchOnClose(value),
+                        themeProvider,
+                      ),
+                      _buildSwitchSetting(
+                        context,
                         'Fuzzy Search',
                         'Enable smart search with partial matches',
                         settingsProvider.fuzzySearch,

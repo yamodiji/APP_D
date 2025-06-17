@@ -15,6 +15,7 @@ class AppConstants {
   static const String animationsKey = 'animations';
   static const String showKeyboardKey = 'show_keyboard';
   static const String showSearchHistoryKey = 'show_search_history';
+  static const String clearSearchOnCloseKey = 'clear_search_on_close';
 
   // Performance constants
   static const int maxSearchResults = 50;

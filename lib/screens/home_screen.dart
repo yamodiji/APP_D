@@ -29,18 +29,38 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     
-    // Auto-focus search bar when app opens
+    // Auto-focus search bar when app opens with multiple attempts
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final settingsProvider = context.read<SettingsProvider>();
-      if (settingsProvider.showKeyboard) {
-        _searchFocusNode.requestFocus();
-      }
+      _requestKeyboardFocus();
     });
 
     // Listen to search controller changes
     _searchController.addListener(() {
       context.read<AppProvider>().search(_searchController.text);
     });
+  }
+
+  void _requestKeyboardFocus() {
+    final settingsProvider = context.read<SettingsProvider>();
+    if (settingsProvider.showKeyboard) {
+      _searchFocusNode.requestFocus();
+      
+      // Force keyboard to show with a slight delay
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (mounted && settingsProvider.showKeyboard) {
+          _searchFocusNode.requestFocus();
+          SystemChannels.textInput.invokeMethod('TextInput.show');
+        }
+      });
+      
+      // Additional attempt with longer delay
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (mounted && settingsProvider.showKeyboard && !_searchFocusNode.hasFocus) {
+          _searchFocusNode.requestFocus();
+          SystemChannels.textInput.invokeMethod('TextInput.show');
+        }
+      });
+    }
   }
 
   @override
@@ -59,7 +79,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       // Auto-focus when app comes back to foreground
       final settingsProvider = context.read<SettingsProvider>();
       if (settingsProvider.showKeyboard && !_searchFocusNode.hasFocus) {
-        _searchFocusNode.requestFocus();
+        _requestKeyboardFocus();
+      }
+    } else if (state == AppLifecycleState.paused) {
+      // Clear search when app is minimized/closed if setting is enabled
+      final settingsProvider = context.read<SettingsProvider>();
+      if (settingsProvider.clearSearchOnClose) {
+        _searchController.clear();
+        context.read<AppProvider>().clearSearch();
       }
     }
   }

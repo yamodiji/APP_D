@@ -12,6 +12,7 @@ class SettingsProvider extends ChangeNotifier {
   bool _showMostUsed = true;
   bool _showKeyboard = true;
   bool _showSearchHistory = true;
+  bool _clearSearchOnClose = false;
   double _iconSize = AppConstants.mediumIconSize;
   double _backgroundOpacity = 0.9;
 
@@ -27,6 +28,7 @@ class SettingsProvider extends ChangeNotifier {
   bool get showMostUsed => _showMostUsed;
   bool get showKeyboard => _showKeyboard;
   bool get showSearchHistory => _showSearchHistory;
+  bool get clearSearchOnClose => _clearSearchOnClose;
   double get iconSize => _iconSize;
   double get backgroundOpacity => _backgroundOpacity;
 
@@ -39,6 +41,7 @@ class SettingsProvider extends ChangeNotifier {
     _showMostUsed = _prefs.getBool(AppConstants.showMostUsedKey) ?? true;
     _showKeyboard = _prefs.getBool(AppConstants.showKeyboardKey) ?? true;
     _showSearchHistory = _prefs.getBool(AppConstants.showSearchHistoryKey) ?? true;
+    _clearSearchOnClose = _prefs.getBool(AppConstants.clearSearchOnCloseKey) ?? false;
     _iconSize = _prefs.getDouble(AppConstants.iconSizeKey) ?? AppConstants.mediumIconSize;
     _backgroundOpacity = _prefs.getDouble(AppConstants.backgroundOpacityKey) ?? 0.9;
   }
@@ -92,6 +95,13 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Clear search on close settings
+  void setClearSearchOnClose(bool enabled) {
+    _clearSearchOnClose = enabled;
+    _prefs.setBool(AppConstants.clearSearchOnCloseKey, enabled);
+    notifyListeners();
+  }
+
   // Icon size settings
   void setIconSize(double size) {
     _iconSize = size;
@@ -133,6 +143,7 @@ class SettingsProvider extends ChangeNotifier {
     _showMostUsed = true;
     _showKeyboard = true;
     _showSearchHistory = true;
+    _clearSearchOnClose = false;
     _iconSize = AppConstants.mediumIconSize;
     _backgroundOpacity = 0.9;
 
@@ -144,6 +155,7 @@ class SettingsProvider extends ChangeNotifier {
     _prefs.setBool(AppConstants.showMostUsedKey, _showMostUsed);
     _prefs.setBool(AppConstants.showKeyboardKey, _showKeyboard);
     _prefs.setBool(AppConstants.showSearchHistoryKey, _showSearchHistory);
+    _prefs.setBool(AppConstants.clearSearchOnCloseKey, _clearSearchOnClose);
     _prefs.setDouble(AppConstants.iconSizeKey, _iconSize);
     _prefs.setDouble(AppConstants.backgroundOpacityKey, _backgroundOpacity);
 
@@ -160,6 +172,7 @@ class SettingsProvider extends ChangeNotifier {
       'showMostUsed': _showMostUsed,
       'showKeyboard': _showKeyboard,
       'showSearchHistory': _showSearchHistory,
+      'clearSearchOnClose': _clearSearchOnClose,
       'iconSize': _iconSize,
       'backgroundOpacity': _backgroundOpacity,
     };
@@ -174,6 +187,7 @@ class SettingsProvider extends ChangeNotifier {
     _showMostUsed = settings['showMostUsed'] ?? true;
     _showKeyboard = settings['showKeyboard'] ?? true;
     _showSearchHistory = settings['showSearchHistory'] ?? true;
+    _clearSearchOnClose = settings['clearSearchOnClose'] ?? false;
     _iconSize = settings['iconSize']?.toDouble() ?? AppConstants.mediumIconSize;
     _backgroundOpacity = settings['backgroundOpacity']?.toDouble() ?? 0.9;
 
@@ -185,6 +199,7 @@ class SettingsProvider extends ChangeNotifier {
     _prefs.setBool(AppConstants.showMostUsedKey, _showMostUsed);
     _prefs.setBool(AppConstants.showKeyboardKey, _showKeyboard);
     _prefs.setBool(AppConstants.showSearchHistoryKey, _showSearchHistory);
+    _prefs.setBool(AppConstants.clearSearchOnCloseKey, _clearSearchOnClose);
     _prefs.setDouble(AppConstants.iconSizeKey, _iconSize);
     _prefs.setDouble(AppConstants.backgroundOpacityKey, _backgroundOpacity);
 

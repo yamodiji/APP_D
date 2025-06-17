@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/theme_provider.dart';
 import '../providers/settings_provider.dart';
 import '../utils/constants.dart';
 
-class SearchBarWidget extends StatelessWidget {
+class SearchBarWidget extends StatefulWidget {
   final TextEditingController controller;
   final FocusNode focusNode;
   final VoidCallback onClear;
@@ -18,6 +19,23 @@ class SearchBarWidget extends StatelessWidget {
     required this.onClear,
     required this.onSettingsPressed,
   });
+
+  @override
+  State<SearchBarWidget> createState() => _SearchBarWidgetState();
+}
+
+class _SearchBarWidgetState extends State<SearchBarWidget> {
+  @override
+  void initState() {
+    super.initState();
+    // Ensure keyboard shows when autofocus is enabled
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final settingsProvider = context.read<SettingsProvider>();
+      if (settingsProvider.showKeyboard && widget.focusNode.hasFocus) {
+        SystemChannels.textInput.invokeMethod('TextInput.show');
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -52,8 +70,8 @@ class SearchBarWidget extends StatelessWidget {
               // Search input field
               Expanded(
                 child: TextField(
-                  controller: controller,
-                  focusNode: focusNode,
+                  controller: widget.controller,
+                  focusNode: widget.focusNode,
                   autofocus: settingsProvider.showKeyboard,
                   style: TextStyle(
                     color: themeProvider.getTextColor(context),
@@ -74,16 +92,16 @@ class SearchBarWidget extends StatelessWidget {
                   onSubmitted: (value) {
                     // Keep focus on search bar after submit
                     if (settingsProvider.showKeyboard) {
-                      focusNode.requestFocus();
+                      widget.focusNode.requestFocus();
                     }
                   },
                 ),
               ),
               
               // Clear button
-              if (controller.text.isNotEmpty)
+              if (widget.controller.text.isNotEmpty)
                 IconButton(
-                  onPressed: onClear,
+                  onPressed: widget.onClear,
                   icon: Icon(
                     Icons.clear,
                     color: themeProvider.getTextColor(context).withOpacity(0.6),
@@ -93,7 +111,7 @@ class SearchBarWidget extends StatelessWidget {
               
               // Settings button
               IconButton(
-                onPressed: onSettingsPressed,
+                onPressed: widget.onSettingsPressed,
                 icon: Icon(
                   Icons.settings,
                   color: themeProvider.getTextColor(context).withOpacity(0.6),
