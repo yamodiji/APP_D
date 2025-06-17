@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:device_apps/device_apps.dart';
+import 'package:installed_apps/installed_apps.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fuzzy/fuzzy.dart';
 import 'package:collection/collection.dart';
@@ -83,17 +83,23 @@ class AppProvider extends ChangeNotifier {
       await _loadSettings();
       
       // Get installed apps
-      final installedApps = await DeviceApps.getInstalledApplications(
-        includeAppIcons: true,
-        includeSystemApps: false,
-        onlyAppsWithLaunchIntent: true,
+      final installedApps = await InstalledApps.getInstalledApps(
+        true, // exclude system apps
+        true, // include icons
+        '', // no package name prefix filter
       );
 
       // Convert to AppInfo objects and filter out unwanted apps
-      _allApps = installedApps
-          .where((app) => app.enabled && !_shouldHideApp(app))
-          .map((app) => AppInfo.fromApplication(app))
-          .toList();
+      _allApps = [];
+      for (var app in installedApps) {
+        // Check if it's a system app separately
+        final isSystemApp = await InstalledApps.isSystemApp(app.packageName);
+        
+        if (!isSystemApp && !_shouldHideApp(app)) {
+          final appInfo = AppInfo.fromInstalledApp(app);
+          _allApps.add(appInfo.copyWith(systemApp: isSystemApp));
+        }
+      }
 
       // Load stored app data (launch counts, favorites, etc.)
       await _loadStoredAppData();
@@ -118,10 +124,8 @@ class AppProvider extends ChangeNotifier {
     }
   }
 
-  bool _shouldHideApp(Application app) {
-    // Hide system apps and certain packages
-    if (app.systemApp) return true;
-    
+  bool _shouldHideApp(installed_apps.AppInfo app) {
+    // Hide certain packages
     final hidePackages = [
       'com.android.launcher',
       'com.google.android.launcher',
@@ -270,7 +274,7 @@ class AppProvider extends ChangeNotifier {
 
   Future<bool> launchApp(AppInfo app) async {
     try {
-      final launched = await DeviceApps.openApp(app.packageName);
+      final launched = await InstalledApps.startApp(app.packageName);
       if (launched) {
         // Update usage statistics
         app.launchCount++;

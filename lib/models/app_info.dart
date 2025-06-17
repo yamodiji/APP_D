@@ -1,5 +1,5 @@
 import 'dart:typed_data';
-import 'package:device_apps/device_apps.dart';
+import 'package:installed_apps/installed_apps.dart' as installed_apps;
 
 class AppInfo {
   final String appName;
@@ -40,20 +40,20 @@ class AppInfo {
     this.searchScore = 0.0,
   });
 
-  factory AppInfo.fromApplication(Application app) {
+  factory AppInfo.fromInstalledApp(installed_apps.AppInfo app) {
     return AppInfo(
-      appName: app.appName,
+      appName: app.name,
       packageName: app.packageName,
-      systemAppName: app.systemAppName,
+      systemAppName: app.name, // installed_apps doesn't distinguish system app name
       versionName: app.versionName,
       versionCode: app.versionCode,
-      dataDir: app.dataDir,
-      systemApp: app.systemApp,
-      installTimeMillis: app.installTimeMillis,
-      updateTimeMillis: app.updateTimeMillis,
-      icon: app is ApplicationWithIcon ? app.icon : null,
-      category: app.category.toString(),
-      enabled: app.enabled,
+      dataDir: null, // not available in installed_apps
+      systemApp: false, // will be determined separately
+      installTimeMillis: app.installedTimestamp,
+      updateTimeMillis: app.installedTimestamp,
+      icon: app.icon,
+      category: 'Unknown', // not available in installed_apps
+      enabled: true, // assume enabled if it's returned by the API
     );
   }
 
