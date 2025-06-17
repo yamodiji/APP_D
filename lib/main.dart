@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_displaymode/flutter_displaymode.dart';
 
 import 'providers/app_provider.dart';
 import 'providers/theme_provider.dart';
@@ -23,13 +22,6 @@ void main() async {
       systemNavigationBarIconBrightness: Brightness.light,
     ),
   );
-
-  // Set high refresh rate if available
-  try {
-    await FlutterDisplayMode.setHighRefreshRate();
-  } catch (e) {
-    // Ignore if not supported
-  }
 
   // Initialize SharedPreferences
   final prefs = await SharedPreferences.getInstance();

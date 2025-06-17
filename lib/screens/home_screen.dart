@@ -216,7 +216,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                   SnackBar(
                                     content: Text('Failed to launch ${app.displayName}'),
                                     duration: const Duration(seconds: 2),
-                                    backgroundColor: AppConstants.errorColor,
+                                    backgroundColor: Colors.red,
                                   ),
                                 );
                               }

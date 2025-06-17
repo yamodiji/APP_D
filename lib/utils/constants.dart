@@ -1,5 +1,3 @@
-import 'package:flutter/material.dart';
-
 class AppConstants {
   // Theme constants
   static const String themeKey = 'theme_mode';
