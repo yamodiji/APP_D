@@ -1,5 +1,5 @@
 import 'dart:typed_data';
-import 'package:installed_apps/installed_apps.dart' as installed_apps;
+import 'package:installed_apps/app_info.dart' as installed_apps;
 
 class AppInfo {
   final String appName;

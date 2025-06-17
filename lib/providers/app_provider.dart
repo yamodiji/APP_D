@@ -1,12 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:installed_apps/installed_apps.dart';
+import 'package:installed_apps/app_info.dart' as installed_apps;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fuzzy/fuzzy.dart';
-import 'package:collection/collection.dart';
 
 import '../models/app_info.dart';
 import '../utils/constants.dart';
@@ -67,8 +66,6 @@ class AppProvider extends ChangeNotifier {
           ),
         ],
         threshold: AppConstants.searchThreshold,
-        distance: 100,
-        includeScore: true,
         shouldSort: true,
       ),
     );
@@ -95,9 +92,9 @@ class AppProvider extends ChangeNotifier {
         // Check if it's a system app separately
         final isSystemApp = await InstalledApps.isSystemApp(app.packageName);
         
-        if (!isSystemApp && !_shouldHideApp(app)) {
+        if (isSystemApp != true && !_shouldHideApp(app)) {
           final appInfo = AppInfo.fromInstalledApp(app);
-          _allApps.add(appInfo.copyWith(systemApp: isSystemApp));
+          _allApps.add(appInfo.copyWith(systemApp: isSystemApp == true));
         }
       }
 
@@ -182,8 +179,10 @@ class AppProvider extends ChangeNotifier {
       
       if (usageData.containsKey(app.packageName)) {
         final data = usageData[app.packageName];
-        app.launchCount = data['launchCount'] ?? 0;
-        app.lastLaunchTime = data['lastLaunchTime'] ?? 0;
+        if (data != null) {
+          app.launchCount = data['launchCount'] ?? 0;
+          app.lastLaunchTime = data['lastLaunchTime'] ?? 0;
+        }
       }
     }
   }
@@ -275,7 +274,7 @@ class AppProvider extends ChangeNotifier {
   Future<bool> launchApp(AppInfo app) async {
     try {
       final launched = await InstalledApps.startApp(app.packageName);
-      if (launched) {
+      if (launched == true) {
         // Update usage statistics
         app.launchCount++;
         app.lastLaunchTime = DateTime.now().millisecondsSinceEpoch;

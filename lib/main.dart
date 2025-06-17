@@ -8,7 +8,7 @@ import 'providers/app_provider.dart';
 import 'providers/theme_provider.dart';
 import 'providers/settings_provider.dart';
 import 'screens/home_screen.dart';
-import 'utils/constants.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
