@@ -81,9 +81,7 @@ jobs:
         flutter pub get
         echo "Dependencies installed successfully"
         
-    - name: Generate app icons
-      run: flutter pub run flutter_launcher_icons:main
-      continue-on-error: true
+
       
     - name: Build APK
       run: |

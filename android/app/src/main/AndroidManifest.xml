@@ -11,7 +11,7 @@
     <application
         android:label="Speed Drawer"
         android:name="${applicationName}"
-        android:icon="@mipmap/launcher_icon"
+        android:icon="@drawable/launcher_icon"
         android:theme="@style/LaunchTheme"
         android:enableOnBackInvokedCallback="true">
         
