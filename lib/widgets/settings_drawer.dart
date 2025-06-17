@@ -92,7 +92,7 @@ class SettingsDrawer extends StatelessWidget {
                       _buildSwitchSetting(
                         context,
                         'Show Keyboard',
-                        'Show keyboard automatically when opening the app',
+                        'Show keyboard automatically so you can type immediately',
                         settingsProvider.showKeyboard,
                         (value) => settingsProvider.setShowKeyboard(value),
                         themeProvider,

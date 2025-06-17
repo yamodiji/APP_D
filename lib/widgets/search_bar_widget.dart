@@ -54,7 +54,7 @@ class SearchBarWidget extends StatelessWidget {
                 child: TextField(
                   controller: controller,
                   focusNode: focusNode,
-                  autofocus: settingsProvider.autoFocus && settingsProvider.showKeyboard,
+                  autofocus: settingsProvider.showKeyboard,
                   style: TextStyle(
                     color: themeProvider.getTextColor(context),
                     fontSize: 16,

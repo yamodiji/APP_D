@@ -32,7 +32,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     // Auto-focus search bar when app opens
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final settingsProvider = context.read<SettingsProvider>();
-      if (settingsProvider.autoFocus && settingsProvider.showKeyboard) {
+      if (settingsProvider.showKeyboard) {
         _searchFocusNode.requestFocus();
       }
     });
@@ -58,7 +58,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) {
       // Auto-focus when app comes back to foreground
       final settingsProvider = context.read<SettingsProvider>();
-      if (settingsProvider.autoFocus && settingsProvider.showKeyboard && !_searchFocusNode.hasFocus) {
+      if (settingsProvider.showKeyboard && !_searchFocusNode.hasFocus) {
         _searchFocusNode.requestFocus();
       }
     }
