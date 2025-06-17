@@ -23,6 +23,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  bool _hasTriedKeyboardAfterLoad = false;
 
   @override
   void initState() {
@@ -63,6 +64,29 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
+  void _retryKeyboardAfterAppLoad() {
+    final settingsProvider = context.read<SettingsProvider>();
+    if (settingsProvider.showKeyboard && !_hasTriedKeyboardAfterLoad) {
+      _hasTriedKeyboardAfterLoad = true;
+      
+      // Wait a bit after app loading completes, then try to show keyboard
+      Future.delayed(const Duration(milliseconds: 200), () {
+        if (mounted && settingsProvider.showKeyboard) {
+          _searchFocusNode.requestFocus();
+          SystemChannels.textInput.invokeMethod('TextInput.show');
+          
+          // Final backup attempt
+          Future.delayed(const Duration(milliseconds: 500), () {
+            if (mounted && settingsProvider.showKeyboard && !_searchFocusNode.hasFocus) {
+              _searchFocusNode.requestFocus();
+              SystemChannels.textInput.invokeMethod('TextInput.show');
+            }
+          });
+        }
+      });
+    }
+  }
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
@@ -76,6 +100,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     super.didChangeAppLifecycleState(state);
     
     if (state == AppLifecycleState.resumed) {
+      // Reset keyboard retry flag when app resumes
+      _hasTriedKeyboardAfterLoad = false;
+      
       // Auto-focus when app comes back to foreground
       final settingsProvider = context.read<SettingsProvider>();
       if (settingsProvider.showKeyboard && !_searchFocusNode.hasFocus) {
@@ -104,14 +131,31 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _scaffoldKey.currentState?.openEndDrawer();
   }
 
+  void _onRefreshApps() async {
+    // Reset keyboard retry flag when manually refreshing
+    _hasTriedKeyboardAfterLoad = false;
+    // Call the actual refresh method
+    await context.read<AppProvider>().refreshApps();
+    // The keyboard retry will happen automatically when loading completes via the build method
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer3<AppProvider, ThemeProvider, SettingsProvider>(
       builder: (context, appProvider, themeProvider, settingsProvider, child) {
+        // Check if apps just finished loading and retry keyboard if needed
+        if (!appProvider.isLoading && !_hasTriedKeyboardAfterLoad) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _retryKeyboardAfterAppLoad();
+          });
+        }
+        
         return Scaffold(
           key: _scaffoldKey,
           backgroundColor: themeProvider.getBackgroundColor(context),
-          endDrawer: const SettingsDrawer(),
+          endDrawer: SettingsDrawer(
+            onRefreshApps: _onRefreshApps,
+          ),
           body: SafeArea(
             child: Column(
               children: [

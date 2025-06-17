@@ -7,7 +7,12 @@ import '../providers/app_provider.dart';
 import '../utils/constants.dart';
 
 class SettingsDrawer extends StatelessWidget {
-  const SettingsDrawer({super.key});
+  final VoidCallback? onRefreshApps;
+  
+  const SettingsDrawer({
+    super.key,
+    this.onRefreshApps,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -162,7 +167,13 @@ class SettingsDrawer extends StatelessWidget {
                         context,
                         'Refresh Apps',
                         Icons.refresh,
-                        () => appProvider.refreshApps(),
+                        () {
+                          if (onRefreshApps != null) {
+                            onRefreshApps!();
+                          } else {
+                            appProvider.refreshApps();
+                          }
+                        },
                         themeProvider,
                       ),
                       _buildActionButton(
